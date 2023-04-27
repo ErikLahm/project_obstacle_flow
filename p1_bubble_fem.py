@@ -1,0 +1,160 @@
+# pyright: reportMissingTypeStubs=false
+from dataclasses import dataclass
+from typing import Tuple
+
+import numpy as np
+import numpy.typing as npt
+
+from triangulation import Triangulation
+
+
+@dataclass
+class P1BubbleFEM:
+    triangulation: Triangulation
+
+    def get_center_coordinates(self) -> npt.ArrayLike:
+        """
+        Returns an array of shape (n_center_pts, 2) where each tuple describes x and y coordinate
+        of a point in the center of each triangle.
+
+        The method loops over all triangles and finds the center points in the same order. Hence,
+        each the numbering of triangles and center points is equal. The center points are
+        calculated using the barycentric coordinates, which are all 1/3 for a center point.
+
+        Returns
+        -------
+        ArrayLike
+            Array of shape (n_center_pts, 2) describing the x, y coordinate of each center point.
+        """
+        coordinates = np.zeros(shape=(1, 2))
+        for triangle in self.triangulation.delauny_tri.simplices:
+            triangle_coords: npt.ArrayLike = self.triangulation.rect_mesh.sorted_mesh_coords[triangle]  # type: ignore
+            x_coord: float = (  # type: ignore
+                1
+                / 3
+                * (
+                    triangle_coords[0][0]  # type: ignore
+                    + triangle_coords[1][0]  # type: ignore
+                    + triangle_coords[2][0]  # type: ignore
+                )
+            )
+            y_coord = (  # type: ignore
+                1
+                / 3
+                * (
+                    triangle_coords[0][1]  # type: ignore
+                    + triangle_coords[1][1]  # type: ignore
+                    + triangle_coords[2][1]  # type: ignore
+                )
+            )
+            single_coords = np.array([x_coord, y_coord])  # type: ignore
+            coordinates = np.vstack((coordinates, single_coords))
+        return coordinates
+
+    def get_dof_and_all_coords(
+        self, central_dof_coords: npt.ArrayLike
+    ) -> Tuple[npt.ArrayLike, npt.ArrayLike]:
+        """
+        Creates tuple of arrays, where the first describes coordinates of all degrees of freedom
+        and the second all coordinates of all points in the domain.
+
+        First array is made up of all inner vertices, the boundary vertices corresponding to
+        Neumann boundary conditions and the center points for the bubble functions.
+        The second array adds all boundary terms to the end of the first array.
+
+        Returns
+        -------
+        Tuple[ArrayLike, ArrayLike]:
+            First array describes coords of all dof. Second describes coords of all discrete points
+            in the domain.
+        """
+
+        split_location = self.triangulation.num_dof_neumann_right - 1
+        splitted_coords = np.vsplit(  # type: ignore
+            self.triangulation.rect_mesh.sorted_mesh_coords, np.array([split_location])  # type: ignore
+        )
+        dof_vert = splitted_coords[0]  # type: ignore
+        diri_vert = splitted_coords[1]  # type: ignore
+        all_dof_coords = np.vstack((dof_vert, central_dof_coords))  # type: ignore
+        all_coords = np.vstack((all_dof_coords, diri_vert))  # type: ignore
+        return all_dof_coords, all_coords
+
+    @property
+    def get_index_center_points(self) -> npt.ArrayLike:
+        """
+        Property represents an array with indices which represent the numbering of the center points.
+
+        The numbering of center points starts right after the last vertex number. This is to say that
+        first all triangle corners (vertices) are numbered that correspond to degrees of freedom (not
+        Dirichlet boundary points) and after that all center points are numbered. The order of the
+        numbering corresponds to the order of triangles in the triangulation.
+
+        Returns
+        -------
+        ArrayLike
+            Array with indices of the center points of triangles.
+        """
+
+        idx_center = np.arange(  # type: ignore
+            self.triangulation.num_dof_neumann_right,  # type: ignore
+            self.triangulation.number_of_triangles + self.triangulation.num_dof_neumann_right,  # type: ignore
+        )
+        center_idx = np.array(idx_center)  # type: ignore
+        return center_idx  # type: ignore
+
+    @property
+    def number_dof_with_bubble(self) -> int:
+        """
+        Describes the number of degrees of freedom, including all inner vertices, Neummann boundary
+        points and the center points for the bubble functions.
+
+        Returns
+        -------
+        int
+            Integer describing the total number of dof of the system.
+        """
+
+        return (
+            self.triangulation.num_dof_neumann_right
+            + self.triangulation.number_of_triangles
+        )
+
+    def ltg_w_neg_bdn(self) -> npt.ArrayLike:
+        """
+        Takes the local to global map generated by Delauny and gives all Dirichlet boundary terms
+        a negative value.
+
+        The negative value corresponds to the index in the array of all discrete points in the
+        domain. (Note: negative values index an array from the back, where the Dirichlet points are)
+
+        Returns
+        -------
+        ArrayLike
+            The Local to Global Map with negative indices for all Dirichlet boundary points.
+        """
+
+        base_ltg = np.copy(self.triangulation.delauny_tri.simplices)
+        base_ltg[base_ltg >= self.triangulation.num_dof_neumann_right] = (
+            base_ltg[base_ltg >= self.triangulation.num_dof_neumann_right]
+            - self.triangulation.number_of_vertices
+        )
+        return base_ltg
+
+    def ltg_w_bubble(self) -> npt.ArrayLike:
+        """
+        Creates the Local to Global map of the whole system.
+
+        This local to global map describes all triangles with their four dof and references with
+        each entry to an index of the array of all points of the systems.
+
+        Returns
+        -------
+        ArrayLike
+            Local to Global Map of the whole System.
+        """
+        ltg_neg_diri = self.ltg_w_neg_bdn()
+        bubble_idx = np.reshape(
+            self.get_index_center_points, (self.triangulation.number_of_triangles, 1)
+        )
+        ltg = np.hstack((ltg_neg_diri, bubble_idx))
+        return ltg
