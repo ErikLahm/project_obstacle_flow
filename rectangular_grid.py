@@ -26,11 +26,11 @@ class RectangularGrid:
 
     Properties
     ----------
-    x_linespace: ArrayLike
+    x_linespace: NDArray[np.float64]
         Array that devides the x dimension in the specified discrete points.
-    y_linespace: ArrayLike
+    y_linespace: NDArray[np.float64]
         Array that devides the y dimension in the specified discrete points.
-    sorted_mesh_coords: ArrayLike
+    sorted_mesh_coords: NDArray[np.float64]
         Array with shape (n_dof,2) that describes x and y coordinates of each point in
         the grid. It is sorted in the way that all Dirichlet boundary points are last.
 
@@ -47,17 +47,17 @@ class RectangularGrid:
     y_discretisation: int
 
     @property
-    def x_linspace(self) -> npt.ArrayLike:
+    def x_linspace(self) -> npt.NDArray[np.float64]:
         return np.linspace(self.x_domain[0], self.x_domain[1], self.x_discretisation)
 
     @property
-    def y_linspace(self) -> npt.ArrayLike:
+    def y_linspace(self) -> npt.NDArray[np.float64]:
         return np.linspace(self.y_domain[0], self.y_domain[1], self.y_discretisation)
 
     @property
-    def sorted_mesh_coords(self) -> npt.ArrayLike:
+    def sorted_mesh_coords(self) -> npt.NDArray[np.float64]:
         """
-        This property generates a mesh of grid point based on the given domanin and discretisation.
+        This property generates a mesh of grid points based on the given domanin and discretisation.
         The mesh array is reshaped to (n_dof,2) where the first column are x coordinates and second
         column the y coordinates of each point of the grid. Then this Array is sorted such that all
         Dirichlet boundary points are moved to the end of the array.
@@ -75,7 +75,9 @@ class RectangularGrid:
         )
         unordered_coords = split_pre_order[0]
         ordered_coords_back = split_pre_order[1].T
-        ordered_coords_front: npt.ArrayLike = unordered_coords.T[  # type:ignore
+        ordered_coords_front: npt.NDArray[
+            np.float64
+        ] = unordered_coords.T[  # type:ignore
             reorder_idx
         ]
         sorted_vertices_coords = np.vstack(
@@ -83,7 +85,13 @@ class RectangularGrid:
         )
         return sorted_vertices_coords
 
-    def get_reordered_idx_dirichlet(self) -> npt.ArrayLike:
+    def get_reordered_idx_dirichlet(self) -> npt.NDArray[np.int32]:
+        """
+        The method is moving also the boundary terms from the left and right side to the end of the array
+        of vertices. Hence, this method prepares the vertices in such a way that Dirichlet boundaries are
+        assumed all around the domain.
+        """
+
         left_bdn_lst: list[int] = [
             self.x_discretisation * i for i in range(self.y_discretisation - 2)
         ]
@@ -99,7 +107,14 @@ class RectangularGrid:
         reorder_idx = np.hstack((inner_idx, lr_bdn_id))
         return reorder_idx
 
-    def get_reordered_idx_neumann_right(self) -> npt.ArrayLike:
+    def get_reordered_idx_neumann_right(self) -> npt.NDArray[np.int32]:
+        """
+        The method gives an index array which can be used to reorder the coordinate array such that also the
+        boundary values from the left hand side are put to the back of the array. That way all Dirichlet
+        boundary terms are moved to the end of the array. Only the Neumann boundary terms stay in their
+        initial position.
+        """
+
         left_bdn_lst: list[int] = [
             self.x_discretisation * i for i in range(self.y_discretisation - 2)
         ]

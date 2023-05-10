@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 
 import matplotlib.pyplot as plt
+import numpy as np
 import numpy.typing as npt
 from scipy.spatial import Delaunay
 
@@ -70,7 +71,7 @@ class Triangulation:
         """
         The number of points that belong to the Dirichlet boundary.
         """
-        return self.number_of_bdn - self.num_dof_neumann_right
+        return self.number_of_bdn - self.num_dof_neumann_right + self.number_of_inner
 
     @property
     def num_dof_neumann_right(self) -> int:
@@ -94,8 +95,24 @@ class Triangulation:
 
     def plot_triangulation(
         self,
-        all_vertex_coords: npt.ArrayLike,
+        all_vertex_coords: npt.NDArray[np.float64],
+        all_discrete_points: npt.NDArray[np.float64],
     ):
+        """
+        Method to visualise the grid. Especially helpful for low discretisation to understand the triangulation.
+
+        Plots the vertices and edges of each triangle. Further it annotates each point in the grid with the
+        corresponding index in the vertex array.
+
+        Parameters
+        ----------
+        all_vertex_coords: npt.NDArray[np.float64]
+            Array that contains all vertex coordinates that make up the triangulation.
+        all_discrete_points: npt.NDArray[np.float64]
+            Array that contains all discrete points making up the finite elements (including the barycentric
+            points for the bubble function)
+        """
+
         _, ax = plt.subplots()  # type: ignore
         ax.triplot(  # type: ignore
             all_vertex_coords[:, 0],  # type: ignore
@@ -103,4 +120,8 @@ class Triangulation:
             self.delauny_tri.simplices,  # type: ignore
             color="grey",
         )
-        plt.show()  # type: ignore
+        ax.scatter(all_discrete_points[:, 0], all_discrete_points[:, 1], c="red")  # type: ignore
+        idx_points = np.arange(len(all_discrete_points))  # type: ignore
+        for i, idx_p in enumerate(idx_points):
+            ax.annotate(idx_p, (all_discrete_points[i, 0], all_discrete_points[i, 1]))  # type: ignore
+        # plt.show()  # type: ignore
