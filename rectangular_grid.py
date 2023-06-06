@@ -123,3 +123,17 @@ class RectangularGrid:
         inner_idx = np.setdiff1d(complete_idx, left_bdn_idx)
         reorder_idx = np.hstack((inner_idx, left_bdn_idx))
         return reorder_idx
+
+    def get_reverted_idx_neumann_right(self) -> npt.NDArray[np.int32]:
+        """
+        Function to revert the reordering of the array. This is necessary to later reorder the solution arrays
+        back to the original order for plotting for example the pressure scalar field.
+        """
+        complete_idx = np.arange(0, self.x_discretisation * (self.y_discretisation - 2))  # type: ignore
+        start_bdn_idx = (self.x_discretisation - 1) * (self.y_discretisation - 2)
+        left_bdn_lst = [start_bdn_idx + i for i in range(self.y_discretisation - 2)]
+        left_bdn_arr = np.array(left_bdn_lst)
+        for j, bdn_idx in enumerate(left_bdn_lst):
+            complete_idx = np.insert(complete_idx, j * self.y_discretisation, bdn_idx)
+        complete_idx = np.delete(complete_idx, (left_bdn_arr + len(left_bdn_lst)))
+        return complete_idx

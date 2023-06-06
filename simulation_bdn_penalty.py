@@ -13,6 +13,8 @@ PRESSURE_GRAD = -100
 C_CONST = 1 / 2 * 1 / NU * (-PRESSURE_GRAD)
 RADIUS = 1
 LENGTH = 7
+X_DISCRETIZATION = 80
+Y_DISCRETIZATION = 80
 
 
 def g_1(x_1: float, x_2: float) -> float:
@@ -24,19 +26,20 @@ def g_1(x_1: float, x_2: float) -> float:
 
 def chi(x_1: float, x_2: float) -> float:
     value_1 = (x_1 - 2) ** 2 + x_2**2
-    value_2 = (x_1 - 3.5) ** 2 + (x_2 - RADIUS) ** 2
-    value_3 = (x_1 - 4.5) ** 2 + (x_2 + RADIUS) ** 2
-    if value_1 <= RADIUS / 3 or value_2 <= RADIUS / 3 or value_3 <= RADIUS / 3:
+    # value_2 = (x_1 - 3.5) ** 2 + (x_2 - RADIUS) ** 2
+    # value_3 = (x_1 - 4.5) ** 2 + (x_2 + RADIUS) ** 2
+    if value_1 <= RADIUS / 3:  # or value_2 <= RADIUS / 3 or value_3 <= RADIUS / 3:
         return 1
     else:
         return 0
+    return 0
 
 
 def main():
     x_domain = (0, LENGTH)
     y_domain = (-RADIUS, RADIUS)
-    x_discret = 50
-    y_discret = 50
+    x_discret = X_DISCRETIZATION
+    y_discret = Y_DISCRETIZATION
 
     meshgrid = RectangularGrid(
         x_domain=x_domain,
@@ -58,8 +61,9 @@ def main():
     rhs = assembler.rhs_penalty(g_boundary_func=g_1)
     u_p_sol = np.linalg.solve(s, rhs)
     visualizer = Visualiser(u_p_sol, p1_bubble_fem)
+    # visualizer.plot_simple(bdn_func=g_1, radius=RADIUS, y_disc=Y_DISCRETIZATION)
     visualizer.plot_penalty()
-    # visualizer.plot_pressure()
+    visualizer.plot_pressure()
     plt.show()  # type: ignore
 
 
