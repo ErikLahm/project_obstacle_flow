@@ -12,9 +12,9 @@ NU = 100
 PRESSURE_GRAD = -100
 C_CONST = 1 / 2 * 1 / NU * (-PRESSURE_GRAD)
 RADIUS = 1
-LENGTH = 7
-X_DISCRETIZATION = 80
-Y_DISCRETIZATION = 80
+LENGTH = 10
+X_DISCRETIZATION = 3
+Y_DISCRETIZATION = 3
 
 
 def g_1(x_1: float, x_2: float) -> float:
@@ -25,10 +25,12 @@ def g_1(x_1: float, x_2: float) -> float:
 
 
 def chi(x_1: float, x_2: float) -> float:
-    value_1 = (x_1 - 2) ** 2 + x_2**2
+    # value_1 = (x_1 - 2) ** 2 + x_2**2
     # value_2 = (x_1 - 3.5) ** 2 + (x_2 - RADIUS) ** 2
+    value_4 = x_1 * (-0.1) + 1
+    value_5 = x_1 * 0.1 - 1
     # value_3 = (x_1 - 4.5) ** 2 + (x_2 + RADIUS) ** 2
-    if value_1 <= RADIUS / 3:  # or value_2 <= RADIUS / 3 or value_3 <= RADIUS / 3:
+    if value_4 <= x_2 or value_5 >= x_2:  # or value_1 <= RADIUS / 3:
         return 1
     else:
         return 0
@@ -49,15 +51,16 @@ def main():
     )
     triangulation = Triangulation(rect_mesh=meshgrid)
     p1_bubble_fem = P1BubbleFE(triangulation=triangulation)
-    # triangulation.plot_triangulation(
-    #     triangulation.rect_mesh.sorted_mesh_coords,
-    #     p1_bubble_fem.discret_points_complete,
-    # )
+    triangulation.plot_triangulation(
+        triangulation.rect_mesh.sorted_mesh_coords,
+        p1_bubble_fem.discret_points_complete,
+    )
     ref_elem = ReferenceElement()
     assembler = AssemblerPenalty(
         reference_element=ref_elem, fe_physical=p1_bubble_fem, nu=1, c_const=1
     )
-    s = assembler.assemble_s_penalty(chi)
+    # s = assembler.assemble_s_penalty(chi)
+    s = assembler.assemble_s_penalty(lambda x, y: 0)
     rhs = assembler.rhs_penalty(g_boundary_func=g_1)
     u_p_sol = np.linalg.solve(s, rhs)
     visualizer = Visualiser(u_p_sol, p1_bubble_fem)

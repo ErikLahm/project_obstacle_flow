@@ -130,6 +130,10 @@ class AssemblerPenalty:
                             continue
                         q = self.integral_b(triangle_map=affine_map_l, k=k, j=j, i=i)
                         d_matrix[row][col] += q
+        assert np.linalg.matrix_rank(d_matrix) == min(d_matrix.shape), (
+            f"Gradient matrix is not full rank: rank(G)={np.linalg.matrix_rank(d_matrix)} "
+            f"but should be rank(G)=min(m,n)={min(d_matrix.shape)}."
+        )
         return d_matrix
 
     def integral_b(self, triangle_map: AffineMap, k: int, j: int, i: int) -> float:
