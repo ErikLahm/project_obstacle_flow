@@ -35,8 +35,8 @@ class AffineMap:
 
     vertex_coords: npt.NDArray[np.float64]
 
-    @property
-    def jacobian(self) -> npt.NDArray[np.float64]:
+    # @property
+    def jacobian(self, x_ref: float, y_ref: float) -> npt.NDArray[np.float64]:
         """
         2by2 matrix/ array representing the constant jacobian over the triangle
         """
@@ -59,7 +59,7 @@ class AffineMap:
         """
         2by2 matrix representing the inverse of the jacobian
         """
-        return np.linalg.inv(self.jacobian)
+        return np.linalg.inv(self.jacobian(x_ref=0, y_ref=0))
 
     @property
     def determinant_jacobian(self) -> float:
@@ -68,8 +68,8 @@ class AffineMap:
         triangle.
         """
         return (
-            self.jacobian[0][0] * self.jacobian[1][1]
-            - self.jacobian[0][1] * self.jacobian[1][0]
+            self.jacobian(0, 0)[0][0] * self.jacobian(0, 0)[1][1]
+            - self.jacobian(0, 0)[0][1] * self.jacobian(0, 0)[1][0]
         )
 
     def aff_map(self, x1_hat: float, x2_hat: float) -> Tuple[float, float]:

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from assembling import assemble_g, assemble_n
 from assembling_lin_sys import AssemblerPenalty
 from p1_bubble_fem import P1BubbleFE
 from rectangular_grid import RectangularGrid
@@ -13,8 +14,8 @@ PRESSURE_GRAD = -100
 C_CONST = 1 / 2 * 1 / NU * (-PRESSURE_GRAD)
 RADIUS = 1
 LENGTH = 10
-X_DISCRETIZATION = 3
-Y_DISCRETIZATION = 3
+X_DISCRETIZATION = 5
+Y_DISCRETIZATION = 5
 
 
 def g_1(x_1: float, x_2: float) -> float:
@@ -60,8 +61,28 @@ def main():
         reference_element=ref_elem, fe_physical=p1_bubble_fem, nu=1, c_const=1
     )
     # s = assembler.assemble_s_penalty(chi)
-    s = assembler.assemble_s_penalty(lambda x, y: 0)
+    s, n_proj, d_proj = assembler.assemble_s_penalty(lambda x, y: 0)
     rhs = assembler.rhs_penalty(g_boundary_func=g_1)
+
+    n_matrix = assemble_n(
+        ref_ltg=p1_bubble_fem.ltg_u1_penalty,
+        grad_sfs=ref_elem.gradient_list,
+        domain_coords=p1_bubble_fem.discret_points_complete,
+        domain_ltg=p1_bubble_fem.ltg_u1_penalty,
+    )
+
+    g_matrix = assemble_g(
+        velo_ltg=p1_bubble_fem.ltg_u1_penalty,
+        press_ltg=p1_bubble_fem.ltg_p,
+        press_sfs=ref_elem.linear_shape_func_list,
+        grad_vel_sfs=ref_elem.gradient_list,
+        domain_coords=p1_bubble_fem.discret_points_complete,
+        domain_ltg=p1_bubble_fem.ltg_u1_penalty,
+    )
+
+    # assert (n_matrix == n_proj).all()
+    assert (np.transpose(g_matrix) == d_proj).all()
+
     u_p_sol = np.linalg.solve(s, rhs)
     visualizer = Visualiser(u_p_sol, p1_bubble_fem)
     # visualizer.plot_simple(bdn_func=g_1, radius=RADIUS, y_disc=Y_DISCRETIZATION)

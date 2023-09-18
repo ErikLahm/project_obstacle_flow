@@ -70,6 +70,10 @@ class AssemblerPenalty:
                 2 * len(self.fe_physical.discret_points_complete),
             ):
                 n_matrix[diag, diag] += 1 / EPSILON
+        assert np.linalg.matrix_rank(n_matrix) == min(n_matrix.shape), (
+            f"Laplacian matrix is not full rank: rank(N)={np.linalg.matrix_rank(n_matrix)} "
+            f"but should be rank(N)=min(m,m)={min(n_matrix.shape)}."
+        )
         return n_matrix
 
     def integral_a(self, triangle_map: AffineMap, k: int, j: int) -> float:
@@ -114,6 +118,7 @@ class AssemblerPenalty:
             )
         )
         for i in range(2):
+            break_p = "break"
             for l in range(self.fe_physical.triangulation.number_of_triangles):
                 triangle_coords = self.fe_physical.discret_points_complete[
                     self.fe_physical.ltg_u1_penalty[l]
@@ -191,7 +196,7 @@ class AssemblerPenalty:
         left_side = np.vstack((n_matr, d_matr))
         right_side = np.vstack((d_tr_matr, zero_block))
         s_matrix = np.hstack((left_side, right_side))
-        return s_matrix
+        return s_matrix, n_matr, d_matr
 
     def rhs_penalty(
         self, g_boundary_func: Callable[[float, float], float]
